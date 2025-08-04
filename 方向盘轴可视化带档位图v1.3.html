@@ -1,0 +1,618 @@
+<!-- 
+  项目：方向盘轴可视化带档位图
+  作者：珊瑚宫琉荧
+  代码协助：SuikaNya（ChatGPT猫娘助手）
+  适配：罗技G29方向盘+ODDOR老司机排挡杆
+ -->
+<!DOCTYPE html>
+<html lang="zh">
+  <!-- 头段代码 -->
+<head>
+  <!-- 指定 HTML 文档的字符编码为 UTF-8，确保支持中文等多语言文本 -->
+  <meta charset="UTF-8">
+
+  <!-- 设置网页标题，显示在浏览器标签上 -->
+  <title>方向盘轴可视化</title>
+
+  <!-- 页面内嵌样式，控制整体布局与样式 -->
+  <style>
+    /* 设置页面整体的字体、背景色、内边距和文本居中 */
+    body {
+      font-family: sans-serif; /* 使用无衬线字体，简洁现代 */
+      background-color: #f0f0f0; /* 背景为浅灰色 */
+      padding: 2rem; /* 页面内容四周内边距为2个rem单位 */
+      text-align: center; /* 文本水平居中 */
+    }
+
+    /* 外层容器包裹方向盘盒与踏板区域，内容水平居中对齐 */
+    .container-wrapper {
+      display: flex; /* 使用 Flexbox 布局 */
+      justify-content: center; /* 主轴（横向）居中 */
+      align-items: flex-end; /* 交叉轴（纵向）底部对齐 */
+      position: relative; /* 为后续的绝对定位元素提供参考 */
+    }
+
+    /* 三个踏板容器包裹部分 */
+    .container {
+      display: flex; /* 横向排列内部元素 */
+      justify-content: center; /* 居中排列 */
+      align-items: flex-end; /* 向下对齐 */
+      height: 300px; /* 设置整体高度 */
+      margin-top: 1rem; /* 顶部间距 */
+      gap: 5rem; /* 三个踏板之间的间距为5rem */
+    }
+
+    /* 单个踏板的整体容器，垂直排列 */
+    .pedal {
+      display: flex;
+      flex-direction: column; /* 垂直方向排列子元素 */
+      align-items: center; /* 子元素居中对齐 */
+    }
+
+    /* 踏板的文字标签样式 */
+    .pedal-label {
+      margin-bottom: 1rem; /* 底部留出1rem的间距 */
+      font-weight: bold; /* 加粗字体 */
+    }
+
+    /* 踏板的背景容器（灰色背景柱状图） */
+    .bar-container {
+      width: 60px; /* 宽度60像素 */
+      height: 200px; /* 高度200像素 */
+      background-color: #ddd; /* 背景为浅灰色 */
+      border-radius: 6px; /* 圆角6像素 */
+      overflow: hidden; /* 超出部分隐藏 */
+      display: flex;
+      flex-direction: column-reverse; /* 值从底部开始增长 */
+      box-shadow: 0 0 5px rgba(0,0,0,0.3); /* 添加轻微阴影效果 */
+    }
+
+    /* 踏板柱状的填充部分（蓝色） */
+    .bar-fill {
+      width: 100%; /* 宽度占满容器 */
+      background-color: #007bff; /* 使用亮蓝色 */
+    }
+
+    /* 显示当前数值的文字样式 */
+    .value-display {
+      margin-top: 0.5rem; /* 上方留出0.5rem间距 */
+      font-size: 1rem; /* 正常字体大小 */
+    }
+
+    /* “方向盘”文字标题样式 */
+    .steering-label {
+      font-weight: bold; /* 加粗 */
+      font-size: 1.2rem; /* 字号大一点 */
+      margin-bottom: 0.5rem; /* 底部间距 */
+    }
+
+    /* 水平方向盘条形容器背景（灰条） */
+    .steering-container {
+      margin: 0 auto 1rem auto; /* 上下外边距自动+1rem，下方留空 */
+      width: 360px; /* 宽度360像素 */
+      height: 40px; /* 高度40像素 */
+      background-color: #ddd; /* 浅灰色背景 */
+      border-radius: 6px; /* 圆角6像素 */
+      overflow: hidden; /* 防止内容超出 */
+      position: relative; /* 为后续绝对定位子元素提供参考 */
+      box-shadow: 0 0 5px rgba(0,0,0,0.3); /* 添加阴影效果 */
+    }
+
+    /* 实际方向盘偏移填充区域（绿色） */
+    .steering-fill {
+      height: 100%; /* 占满高度 */
+      position: absolute; /* 绝对定位以便动态调节位置 */
+      top: 0; /* 顶部对齐 */
+      background-color: #28a745; /* 绿色填充 */
+    }
+
+    /* 当前方向文字显示样式（中、左、右） */
+    #steeringDirection {
+      font-size: 1.2rem; /* 字体稍大 */
+      margin-top: 0.5rem; /* 顶部间距 */
+    }
+
+    /* 当前方向值显示样式（数值） */
+    #steeringValue {
+      font-size: 1rem; /* 正常字体 */
+      margin-top: 0.2rem; /* 小间距 */
+    }
+
+    /* 手刹图标的方块样式 */
+    .handbrake {
+      width: 60px;
+      height: 60px;
+      background-color: #aaa; /* 默认灰色背景 */
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3); /* 阴影 */
+      display: flex;
+      align-items: center;
+      justify-content: center; /* 文字居中 */
+      font-weight: bold;
+      color: white; /* 白字 */
+      position: absolute; /* 绝对定位 */
+      bottom: 280px;
+      right: calc(50% - 220px - 5rem); /* 右侧定位，结合中心偏移量 */
+      overflow: hidden;
+    }
+
+    /* 手刹的红色激活动画背景 */
+    .handbrake::before {
+      content: ''; /* 虚拟元素 */
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 0%; /* 初始不可见 */
+      background-color: #dc3545; /* 红色背景 */
+      transition: height 0.3s ease; /* 动画过渡 */
+      z-index: 0; /* 在文字层下方 */
+    }
+
+    /* 激活手刹状态时，红色背景拉满 */
+    .handbrake.active::before {
+      height: 100%;
+    }
+
+    /* 手刹文字保持在最上层 */
+    .handbrake span {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 圆形方向盘图标容器 */
+    .steering-box {
+      width: 60px;
+      height: 60px;
+      background-color: #AAAAAA;
+      border-radius: 50%; /* 圆形 */
+      position: absolute;
+      bottom: 280px;
+      left: calc(50% - 220px - 5rem); /* 与手刹对称位置 */
+      transform-origin: center center; /* 旋转中心设置为中心点 */
+      transform: rotate(0deg); /* 初始旋转角度为0 */
+      box-shadow: inset 0 0 0 5px #666666; /* 内阴影形成圆圈边框 */
+    }
+
+    /* 方向盘上的红点（隐藏） */
+    .steering-box::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      background-color: red;
+      border-radius: 50%; /* 圆点 */
+      display: none; /* 默认不显示 */
+    }
+
+    /* 勾选“红点显示”时，显示红点 */
+    .steering-box.show-dot::after {
+      display: block;
+    }
+
+    /* 水平左侧横线装饰 */
+    .steering-box::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 50%;
+      height: 5px;
+      background: #666666;
+      transform: translateY(-50%);
+    }
+
+    /* 水平右侧横线装饰 */
+    .steering-box .line-right {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      width: 50%;
+      height: 5px;
+      background: #666666;
+      transform: translateY(-50%);
+    }
+
+    /* 垂直下方竖线装饰 */
+    .steering-box .line-down {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      height: 50%;
+      width: 5px;
+      background: #666666;
+      transform: translateX(-50%);
+    }
+
+    /* 配置面板外观样式 */
+    .config-panel {
+      margin-top: 3rem; /* 与内容隔开一段距离 */
+      font-size: 1rem; /* 标准字体大小 */
+    }
+
+    /* 配置项标签样式 */
+    .config-panel label {
+      margin: 0 1rem; /* 左右各1rem间距 */
+    }
+
+    /* 换挡位置圆形图标样式 */
+    .gear-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%; /* 圆形 */
+      border: 2px solid #444; /* 深灰色边框 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      background-color: #ddd; /* 灰色背景 */
+      transition: background-color 0.2s; /* 背景变色过渡动画 */
+      position: absolute; /* 允许在坐标图上布局 */
+    }
+
+    /* 当前挡位高亮状态 */
+    .gear-circle.active {
+      background-color: #ff9800; /* 高亮橙色背景 */
+      color: white; /* 文字变白 */
+    }
+    .gear-panel {
+      position: absolute;
+      left: 100%; /* 紧贴油门条右侧 */
+      bottom: 0;  /* 紧贴油门条底部 */
+      margin-left: 2rem; /* 右侧留空隙 */
+      margin-bottom: 1rem; /* 底部留空隙 */
+      width: 280px;
+      height: 120px;
+    }
+    .pedal-throttle {
+      position: relative; /* 关键：让档位图可以相对这个容器定位 */
+    }
+
+  </style>
+</head>
+  <!-- 身段代码 -->
+<body>
+  <!-- 页面主标题，显示在网页正文顶部 -->
+  <h1>方向盘轴可视化</h1>
+
+  <!-- 简要说明：展示游戏手柄（方向盘）各个轴的实时值 -->
+  <p>显示 Gamepad 上各踏板和方向盘的实时值</p>
+
+  <!-- 方向盘部分的标题 -->
+  <div class="steering-label">方向盘</div>
+
+  <!-- 水平方向盘状态的可视化进度条容器 -->
+  <div class="steering-container">
+    <!-- 绿色的进度条，用于根据方向盘角度动态改变宽度和位置 -->
+    <div id="steeringBar" class="steering-fill"></div>
+  </div>
+
+  <!-- 显示方向盘当前方向：中、左、右 -->
+  <div id="steeringDirection">中</div>
+
+  <!-- 显示方向盘当前方向角度 -->
+  <div id="steeringAngleDisplay" style="display: flex; font-family: 'Courier New', monospace; font-size: 1.2rem; justify-content: center;">
+  
+    <!-- 固定宽度，方向标志 -->
+    <div style="width: 1.5ch; text-align: right;">
+      <span id="steeringPrefix">R</span>
+    </div>
+  
+    <!-- 角度内容块 -->
+    <div style="display: flex;">
+      <span id="steeringDegrees" style="width: 4ch; text-align: right;">00°</span>
+      <span id="steeringMinutes" style="width: 3ch; text-align: right;">00′</span>
+    </div>
+  
+  </div>
+
+  <!-- 外层容器包裹方向盘图标、三个踏板和手刹区域 -->
+  <div class="container-wrapper">
+
+    <!-- 圆形方向盘图标，用于显示旋转状态 -->
+    <div id="steeringBox" class="steering-box">
+      <!-- 右侧的横线装饰条 -->
+      <div class="line-right"></div>
+      <!-- 下方的竖线装饰条 -->
+      <div class="line-down"></div>
+    </div>
+
+    <!-- 三个踏板的容器 -->
+    <div class="container">
+
+      <!-- 第一个踏板：离合 -->
+      <div class="pedal">
+        <div class="pedal-label">离合</div> <!-- 踏板标题文字 -->
+        <div class="bar-container"> <!-- 外部灰色背景条 -->
+          <!-- 内部蓝色填充柱，根据轴值调整高度 -->
+          <div id="clutchBar" class="bar-fill" style="height: 0%"></div>
+        </div>
+        <!-- 显示离合当前轴值 -->
+        <div id="clutchValue" class="value-display">0</div>
+      </div>
+
+      <!-- 第二个踏板：刹车 -->
+      <div class="pedal">
+        <div class="pedal-label">刹车</div>
+        <div class="bar-container">
+          <div id="brakeBar" class="bar-fill" style="height: 0%"></div>
+        </div>
+        <div id="brakeValue" class="value-display">0</div>
+      </div>
+
+      <!-- 第三个踏板：油门 -->
+      <div class="pedal pedal-throttle">
+        <div class="pedal-label">油门</div>
+        <div class="bar-container">
+          <div id="throttleBar" class="bar-fill" style="height: 0%"></div>
+        </div>
+        <div id="throttleValue" class="value-display">0</div>
+          <!-- 换挡区域布局：位于右下角，通过圆形按钮表示当前挡位 -->
+          <div class="gear-panel">
+          <!-- 倒挡 -->
+          <div class="gear-circle" id="gear-R" style="left: 0px; top: 0px;">R</div>
+          <!-- 空挡 -->
+          <div class="gear-circle" id="gear-N" style="left: 0px; top: 60px;">N</div>
+          <!-- 一挡 -->
+          <div class="gear-circle" id="gear-1" style="left: 60px; top: 0px;">1</div>
+          <!-- 二挡 -->
+          <div class="gear-circle" id="gear-2" style="left: 60px; top: 60px;">2</div>
+          <!-- 三挡 -->
+          <div class="gear-circle" id="gear-3" style="left: 120px; top: 0px;">3</div>
+          <!-- 四挡 -->
+          <div class="gear-circle" id="gear-4" style="left: 120px; top: 60px;">4</div>
+          <!-- 五挡 -->
+          <div class="gear-circle" id="gear-5" style="left: 180px; top: 0px;">5</div>
+          <!-- 六挡 -->
+          <div class="gear-circle" id="gear-6" style="left: 180px; top: 60px;">6</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 手刹的显示方块，用于标示是否拉起 -->
+    <div id="handbrakeBox" class="handbrake">
+      <span>手刹</span> <!-- 中心显示文字“手刹” -->
+    </div>
+  </div>
+
+  <!-- 轴和按钮配置面板，允许用户手动调整对应的轴编号 -->
+  <div class="config-panel">
+    <!-- 输入框：配置离合轴编号 -->
+    <label>离合轴: 
+      <input type="number" id="configClutch" value="1" style="width:3rem;">
+    </label>
+    <!-- 输入框：配置刹车轴编号 -->
+    <label>刹车轴: 
+      <input type="number" id="configBrake" value="5" style="width:3rem;">
+    </label>
+    <!-- 输入框：配置油门轴编号 -->
+    <label>油门轴: 
+      <input type="number" id="configThrottle" value="2" style="width:3rem;">
+    </label>
+    <!-- 输入框：配置方向盘轴编号 -->
+    <label>方向盘轴: 
+      <input type="number" id="configSteering" value="0" style="width:3rem;">
+    </label>
+    <!-- 输入框：配置手刹按钮编号 -->
+    <label>手刹按钮: 
+      <input type="number" id="configHandbrake" value="24" style="width:3rem;">
+    </label>
+    <!-- 复选框：是否显示方向盘中央红点 -->
+    <label>红点显示: 
+      <input type="checkbox" id="configShowDot">
+    </label>
+  </div>
+
+<script> // JS段
+
+  // === 配置项变量 ===
+  let clutchAxis = 1;         // 离合轴编号（默认为 1）
+  let throttleAxis = 2;       // 油门轴编号（默认为 2）
+  let brakeAxis = 5;          // 刹车轴编号（默认为 5）
+  let steeringAxis = 0;       // 方向盘轴编号（默认为 0）
+  let handbrakeButton = 24;   // 手刹按钮编号（默认为 24）
+
+  // === 手刹状态控制变量 ===
+  let handbrakeActive = false; // 当前手刹是否处于激活状态
+  let buttonHeld = false;      // 是否正在按住按钮
+  let pressTimer = null;       // 长按计时器
+  let ignoreRelease = false;   // 是否忽略松开事件（用于长按取消）
+
+  // === 游戏手柄引用 ===
+  let primaryGamepad = null;   // 主手柄（方向盘/踏板）
+  let secondaryGamepad = null; // 次手柄（用于换挡按钮）
+
+  // 更新用户输入的配置项
+  function updateConfig() {
+    clutchAxis = parseInt(document.getElementById('configClutch').value); // 更新离合轴
+    brakeAxis = parseInt(document.getElementById('configBrake').value);   // 更新刹车轴
+    throttleAxis = parseInt(document.getElementById('configThrottle').value); // 更新油门轴
+    steeringAxis = parseInt(document.getElementById('configSteering').value); // 更新方向盘轴
+    handbrakeButton = parseInt(document.getElementById('configHandbrake').value); // 更新手刹按钮
+    const showDot = document.getElementById('configShowDot').checked; // 是否勾选显示方向盘红点
+    document.getElementById('steeringBox').classList.toggle('show-dot', showDot); // 添加/移除显示类
+  }
+
+  // 分配游戏手柄设备
+  function assignGamepads() {
+    const gamepads = navigator.getGamepads(); // 获取当前所有连接的手柄
+    primaryGamepad = null;
+    secondaryGamepad = null;
+    for (let gp of gamepads) {
+      if (!gp) continue; // 跳过空位
+      if (gp.axes.length > 8 && !primaryGamepad) {
+        primaryGamepad = gp; // 优先分配方向盘（有多个轴）
+      } else if (gp.axes.length < 2 && !secondaryGamepad) {
+        secondaryGamepad = gp; // 剩余作为排挡杆（轴较少）
+      }
+    }
+  }
+
+  // 监听手柄连接和断开事件，动态重新分配
+  window.addEventListener("gamepadconnected", assignGamepads); // 连接时触发
+  window.addEventListener("gamepaddisconnected", assignGamepads); // 断开时触发
+
+  // 页面加载完毕后初始化
+  document.addEventListener("DOMContentLoaded", () => {
+    assignGamepads(); // 初次分配手柄
+    document.getElementById('configShowDot').checked = false; // 默认不勾选红点
+    document.getElementById('steeringBox').classList.remove('show-dot'); // 确保红点不显示
+    document.querySelectorAll('#configClutch, #configBrake, #configThrottle, #configSteering, #configHandbrake, #configShowDot')
+      .forEach(input => input.addEventListener('input', updateConfig)); // 所有配置输入框绑定事件
+    requestAnimationFrame(pollGamepad); // 启动动画循环，开始轮询手柄状态
+  });
+
+  // 更新单个踏板柱状条
+  function updateBar(axisValue, barId, valueId) {
+    const normalizedValue = (1 - axisValue) / 2; // 将范围从 [-1, 1] 归一化为 [0, 1]
+    const percent = normalizedValue * 100; // 转换为百分比高度
+    document.getElementById(barId).style.height = `${percent}%`; // 设置柱状条高度
+    document.getElementById(valueId).textContent = (normalizedValue * 100).toFixed(0);// 显示数值文本
+  }
+
+  // 更新方向盘条形图与旋转图标
+  function updateSteeringBar(axisValue) {
+    const bar = document.getElementById('steeringBar'); // 获取绿色进度条
+    const containerWidth = 360;
+    const halfWidth = containerWidth / 2;
+    const offset = axisValue * halfWidth;
+    const absPercent = Math.abs(axisValue) * 50;
+    if (axisValue >= 0) {
+      bar.style.left = `${halfWidth}px`; // 从中间向右拉伸
+      bar.style.width = `${absPercent}%`;
+    } else {
+      bar.style.left = `${halfWidth + offset}px`; // 从中间向左拉伸
+      bar.style.width = `${absPercent}%`;
+    }
+    let direction = '中'; // 初始方向为中
+    if (axisValue < -0.01136) direction = '左'; // 小于阈值判定为左
+    else if (axisValue > 0.01136) direction = '右'; // 大于阈值判定为右
+    document.getElementById('steeringDirection').textContent = direction; // 显示方向文本
+    const steeringDegrees = axisValue * 440;
+    const absDegrees = Math.abs(steeringDegrees);
+    const degreesPart = Math.floor(absDegrees);
+    const minutesPart = Math.floor((absDegrees - degreesPart) * 60);
+
+    // 只有角度为 0 且 分钟为 0 才不显示方向
+    let prefix = '';
+    if (!(degreesPart === 0 && minutesPart === 0)) {
+      prefix = steeringDegrees < 0 ? 'L' : 'R';
+    }
+
+    // 更新显示
+    document.getElementById('steeringPrefix').textContent = prefix;
+    document.getElementById('steeringDegrees').textContent = `${degreesPart}°`;
+    document.getElementById('steeringMinutes').textContent = `${minutesPart}′`;
+
+
+
+    // 保留方向盘图像旋转逻辑
+    const rotation = axisValue * 440;
+    document.getElementById('steeringBox').style.transform = `rotate(${rotation}deg)`;
+  }
+
+  // 更新手刹状态，支持按一下切换，长按取消
+  function updateHandbrake(button) {
+    const box = document.getElementById('handbrakeBox');
+    if (button.pressed) {
+      if (!buttonHeld) {
+        buttonHeld = true;
+        ignoreRelease = false;
+        pressTimer = setTimeout(() => {
+          handbrakeActive = false;
+          box.classList.remove('active'); // 取消激活样式
+          ignoreRelease = true; // 忽略这次松开
+        }, 500); // 长按超过 500ms 视为取消手刹
+      }
+    } else {
+      if (buttonHeld && !ignoreRelease) {
+        clearTimeout(pressTimer);
+        handbrakeActive = !handbrakeActive; // 切换状态
+      }
+      buttonHeld = false;
+      ignoreRelease = false;
+      box.classList.toggle('active', handbrakeActive); // 根据状态显示红色填充
+    }
+  }
+
+  // 更新换挡指示圆圈的高亮状态
+  function updateGearIndicators() {
+    const buttonMap = {
+      7: 'gear-R', 5: 'gear-1', 4: 'gear-2',
+      3: 'gear-3', 2: 'gear-4', 1: 'gear-5', 0: 'gear-6'
+    }; // 对应按钮编号和挡位元素ID
+    for (let index in buttonMap) {
+      const el = document.getElementById(buttonMap[index]);
+      if (secondaryGamepad && secondaryGamepad.buttons[index] && secondaryGamepad.buttons[index].pressed) {
+        el.classList.add('active'); // 如果按下，对应挡位高亮
+      } else {
+        el.classList.remove('active'); // 否则取消高亮
+      }
+    }
+  }
+
+  // 主循环：持续轮询手柄状态并更新界面
+  function pollGamepad() {
+    assignGamepads(); // 每帧尝试更新手柄引用（适配热插拔）
+    if (primaryGamepad) {
+      updateBar(primaryGamepad.axes[clutchAxis], 'clutchBar', 'clutchValue');     // 离合
+      updateBar(primaryGamepad.axes[brakeAxis], 'brakeBar', 'brakeValue');        // 刹车
+      updateBar(primaryGamepad.axes[throttleAxis], 'throttleBar', 'throttleValue'); // 油门
+      updateSteeringBar(primaryGamepad.axes[steeringAxis]);                       // 方向盘
+      if (primaryGamepad.buttons.length > handbrakeButton) {
+        updateHandbrake(primaryGamepad.buttons[handbrakeButton]); // 手刹
+      }
+    }
+    updateGearIndicators(); // 更新换挡显示
+    requestAnimationFrame(pollGamepad); // 下一帧继续执行
+  }
+
+//自动空挡延时
+let noInputSince = null;
+const noInputThreshold = 800; // 毫秒
+
+function updateGearIndicators() {
+  const buttonMap = {
+    7: 'gear-R', 5: 'gear-1', 4: 'gear-2',
+    3: 'gear-3', 2: 'gear-4', 1: 'gear-5', 0: 'gear-6'
+  };
+
+  const allGears = ['gear-N', ...Object.values(buttonMap)];
+  allGears.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+
+  const now = performance.now(); // 精确时间
+  const anyPressed = secondaryGamepad && secondaryGamepad.buttons.some(b => b.pressed);
+
+  if (!secondaryGamepad || !anyPressed) {
+    // 没有输入：判断是否达到空挡判定时间
+    if (noInputSince === null) {
+      noInputSince = now; // 第一次无输入时间戳
+    } else if (now - noInputSince >= noInputThreshold) {
+      document.getElementById('gear-N').classList.add('active');
+      return;
+    }
+  } else {
+    // 有输入，重置 noInputSince
+    noInputSince = null;
+
+    // 检测当前挡位
+    for (let index in buttonMap) {
+      if (secondaryGamepad.buttons[index] && secondaryGamepad.buttons[index].pressed) {
+        document.getElementById(buttonMap[index]).classList.add('active');
+      }
+    }
+  }
+}
+
+</script>
+
+
+</body>
+</html>
